@@ -68,7 +68,7 @@ def main():
         for block in iter(lambda:f.read(1024*1024),b""): h.update(block)
     with zipfile.ZipFile(args.apk) as z:
         infos=z.infolist()
-        dex=sorted(i for i in infos if re.fullmatch(r"classes(?:\\d+)?\\.dex",i.filename))
+        dex=sorted(i for i in infos if re.fullmatch(r"classes([0-9]+)?[.]dex",i.filename))
         native=[i for i in infos if i.filename.startswith("lib/") and i.filename.endswith(".so")]
         assets=[i for i in infos if i.filename.startswith("assets/")]
         groups=collections.Counter("/".join(i.filename.split("/")[:2]) for i in assets)
