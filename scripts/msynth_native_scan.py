@@ -43,6 +43,31 @@ def read_function_symbols(path: Path):
             found.setdefault(address, (address, size, name))
     return sorted(found.values())
 
+def read_stripped_function_starts(path: Path):
+    """Heuristically find AArch64 function prologues when app symbols are stripped."""
+    try:
+        output = subprocess.run(
+            ["llvm-objdump", "-d", "--no-show-raw-insn", "--arch-name=aarch64", str(path)],
+            check=True, capture_output=True, text=True, errors="replace",
+        ).stdout
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return []
+    pattern = re.compile(
+        r"^\s*([0-9a-fA-F]+):\s+(?:bti\s+c|paciasp|stp\s+x29,\s*x30,\s*\[sp,\s*#-[^\]]+\]!|sub\s+sp,\s*sp,\s*#[0-9a-fx]+)",
+        re.IGNORECASE,
+    )
+    return [
+        (int(match.group(1), 16), 0, "sub_" + match.group(1))
+        for line in output.splitlines()
+        if (match := pattern.match(line))
+    ]
+
+
+def is_runtime_symbol(name: str) -> bool:
+    return name.startswith(("_ZNSt", "_ZSt", "__cxa", "__gxx", "_Unwind")) or name in {
+        "memcpy", "memmove", "memset", "memcmp", "malloc", "free"
+    }
+
 def expression_stats(expr):
     ops = Counter()
     node_count = 0
