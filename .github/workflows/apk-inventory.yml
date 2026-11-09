@@ -1,0 +1,35 @@
+name: APK inventory
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'AMZP_ORIDARK_22OCT.apk'
+      - 'scripts/apk_inventory.py'
+      - '.github/workflows/apk-inventory.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate read-only APK inventory
+        run: python scripts/apk_inventory.py AMZP_ORIDARK_22OCT.apk --out-dir build
+      - name: Upload inventory reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: doge-editing-apk-inventory
+          path: |
+            build/apk-inventory.json
+            build/apk-inventory.md
+          if-no-files-found: error
+          retention-days: 14
