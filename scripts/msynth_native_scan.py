@@ -85,7 +85,16 @@ def analyze_library(path: Path, simplifier, max_functions: int, max_candidates: 
     disassembler = machine.dis_engine(container.bin_stream, loc_db=container.loc_db)
     lifter = machine.lifter_model_call(disassembler.loc_db)
     all_symbols = read_function_symbols(path)
-    symbols = all_symbols[:max_functions]
+    named_app_symbols = [item for item in all_symbols if not is_runtime_symbol(item[2])]
+    known_runtime_addresses = {item[0] for item in all_symbols if is_runtime_symbol(item[2])}
+    heuristic_symbols = [
+        item for item in read_stripped_function_starts(path)
+        if item[0] not in known_runtime_addresses
+    ]
+    combined = {item[0]: item for item in named_app_symbols}
+    for item in heuristic_symbols:
+        combined.setdefault(item[0], item)
+    symbols = sorted(combined.values())[:max_functions]
     candidates, seen = [], set()
     failures = Counter()
 
@@ -142,6 +151,8 @@ def analyze_library(path: Path, simplifier, max_functions: int, max_candidates: 
     return {
         "library": path.name, "architecture": container.arch, "status": "analyzed",
         "function_symbols_found": len(all_symbols),
+        "named_app_symbols": len(named_app_symbols),
+        "heuristic_function_starts": len(heuristic_symbols),
         "functions_examined": len(symbols),
         "mba_candidates": len(candidates),
         "verified_smaller_results": sum(
@@ -183,7 +194,7 @@ def main():
                     report["libraries"].append(
                         analyze_library(
                             library_path,
-                            Simplifier(enforce_equivalence=True, solver_timeout=1000),
+                            Simplifier(enforce_equivalence=True, solver_timeout=1),
                             args.max_functions, args.max_candidates
                         )
                     )
