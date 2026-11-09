@@ -17,7 +17,7 @@ This is a read-only inventory of the supplied APK. It records package metadata, 
 - DEX files: `11`
 - Native libraries: `38`, for `arm64-v8a` and `armeabi-v7a`
 - Assets: `1,459`
-- Effect data files (`.ta`): `1,107`
+- Files under `assets/effects/`: `1,107` total, including `600` `.ta` effect-data files and `13` preset XML files
 - Shader files: `26`
 - Effect preset XML files: `13`
 - Code-protection marker files: `3`
