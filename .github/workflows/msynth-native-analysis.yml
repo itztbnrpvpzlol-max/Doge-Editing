@@ -1,0 +1,53 @@
+name: MSynth native APK analysis
+
+on:
+  push:
+    branches:
+      - analysis/initial-apk-inventory
+    paths:
+      - "AMZP_ORIDARK_22OCT.apk"
+      - "scripts/msynth_native_scan.py"
+      - ".github/workflows/msynth-native-analysis.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  msynth-native-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out APK and analysis scripts
+        uses: actions/checkout@v4
+        with:
+          ref: analysis/initial-apk-inventory
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Miasm and msynth
+        run: |
+          python -m pip install --upgrade pip wheel
+          python -m pip install z3-solver "git+https://github.com/cea-sec/miasm@1dc5fa90311992c92b7cff08f3c5354ece67a995"
+          git clone --depth 1 https://github.com/mrphrazer/msynth.git /tmp/msynth
+          python -m pip install --no-deps /tmp/msynth
+
+      - name: Run msynth against selected ARM64 native libraries
+        run: |
+          python scripts/msynth_native_scan.py \
+            --apk AMZP_ORIDARK_22OCT.apk \
+            --output reports/msynth-native-scan.json \
+            --max-functions 120 \
+            --max-candidates 40
+
+      - name: Upload msynth report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: msynth-native-analysis
+          path: reports/msynth-native-scan.json
+          if-no-files-found: warn
+          retention-days: 14
